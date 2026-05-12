@@ -20,16 +20,16 @@ Source: [mailfud.org/geoip-legacy](https://mailfud.org/geoip-legacy/)
 | `v1/GeoIPOrgv6.dat.gz` | Organization — IPv6 |
 
 ```
-https://raw.githubusercontent.com/burachai-x/geolite2-database/main/v1/GeoIP.dat.gz
-https://raw.githubusercontent.com/burachai-x/geolite2-database/main/v1/GeoIPv6.dat.gz
-https://raw.githubusercontent.com/burachai-x/geolite2-database/main/v1/GeoIPCity.dat.gz
-https://raw.githubusercontent.com/burachai-x/geolite2-database/main/v1/GeoIPCityv6.dat.gz
-https://raw.githubusercontent.com/burachai-x/geolite2-database/main/v1/GeoIPASNum.dat.gz
-https://raw.githubusercontent.com/burachai-x/geolite2-database/main/v1/GeoIPASNumv6.dat.gz
-https://raw.githubusercontent.com/burachai-x/geolite2-database/main/v1/GeoIPISP.dat.gz
-https://raw.githubusercontent.com/burachai-x/geolite2-database/main/v1/GeoIPISPv6.dat.gz
-https://raw.githubusercontent.com/burachai-x/geolite2-database/main/v1/GeoIPOrg.dat.gz
-https://raw.githubusercontent.com/burachai-x/geolite2-database/main/v1/GeoIPOrgv6.dat.gz
+https://raw.githubusercontent.com/burachai-x/geolite-database/main/v1/GeoIP.dat.gz
+https://raw.githubusercontent.com/burachai-x/geolite-database/main/v1/GeoIPv6.dat.gz
+https://raw.githubusercontent.com/burachai-x/geolite-database/main/v1/GeoIPCity.dat.gz
+https://raw.githubusercontent.com/burachai-x/geolite-database/main/v1/GeoIPCityv6.dat.gz
+https://raw.githubusercontent.com/burachai-x/geolite-database/main/v1/GeoIPASNum.dat.gz
+https://raw.githubusercontent.com/burachai-x/geolite-database/main/v1/GeoIPASNumv6.dat.gz
+https://raw.githubusercontent.com/burachai-x/geolite-database/main/v1/GeoIPISP.dat.gz
+https://raw.githubusercontent.com/burachai-x/geolite-database/main/v1/GeoIPISPv6.dat.gz
+https://raw.githubusercontent.com/burachai-x/geolite-database/main/v1/GeoIPOrg.dat.gz
+https://raw.githubusercontent.com/burachai-x/geolite-database/main/v1/GeoIPOrgv6.dat.gz
 ```
 
 ## v2 — GeoLite2 (.mmdb)
@@ -43,9 +43,9 @@ Source: [P3TERX/GeoLite.mmdb](https://github.com/P3TERX/GeoLite.mmdb) (upstream:
 | `v2/GeoLite2-Country.mmdb` | IP → Country |
 
 ```
-https://raw.githubusercontent.com/burachai-x/geolite2-database/main/v2/GeoLite2-ASN.mmdb
-https://raw.githubusercontent.com/burachai-x/geolite2-database/main/v2/GeoLite2-City.mmdb
-https://raw.githubusercontent.com/burachai-x/geolite2-database/main/v2/GeoLite2-Country.mmdb
+https://raw.githubusercontent.com/burachai-x/geolite-database/main/v2/GeoLite2-ASN.mmdb
+https://raw.githubusercontent.com/burachai-x/geolite-database/main/v2/GeoLite2-City.mmdb
+https://raw.githubusercontent.com/burachai-x/geolite-database/main/v2/GeoLite2-Country.mmdb
 ```
 
 ## Update Schedule
