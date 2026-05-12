@@ -2,7 +2,7 @@ name: Sync GeoLite2 Databases
 
 on:
   schedule:
-    - cron: '0 0 * * *'
+    - cron: '13 20 * * *'
   workflow_dispatch:
 
 permissions:

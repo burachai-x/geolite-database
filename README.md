@@ -50,7 +50,7 @@ https://raw.githubusercontent.com/burachai-x/geolite-database/main/v2/GeoLite2-C
 
 ## Update Schedule
 
-Runs daily at **00:00 UTC** (07:00 ICT). Only commits when databases change.
+Runs daily at **20:13 UTC** (03:13 ICT next day). Only commits when databases change.
 
 ## License
 
