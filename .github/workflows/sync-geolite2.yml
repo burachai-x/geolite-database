@@ -1,4 +1,4 @@
-name: Sync GeoLite2 Databases
+name: Sync GeoIP Databases
 
 on:
   schedule:
@@ -19,25 +19,63 @@ jobs:
       - name: Download GeoIP Legacy databases from mailfud.org (v1)
         run: |
           BASE="https://mailfud.org/geoip-legacy"
-          mkdir -p v1
-          curl -fsSL "$BASE/GeoIP.dat.gz"        -o v1/GeoIP.dat.gz
-          curl -fsSL "$BASE/GeoIPv6.dat.gz"      -o v1/GeoIPv6.dat.gz
-          curl -fsSL "$BASE/GeoIPCity.dat.gz"    -o v1/GeoIPCity.dat.gz
-          curl -fsSL "$BASE/GeoIPCityv6.dat.gz"  -o v1/GeoIPCityv6.dat.gz
-          curl -fsSL "$BASE/GeoIPASNum.dat.gz"   -o v1/GeoIPASNum.dat.gz
-          curl -fsSL "$BASE/GeoIPASNumv6.dat.gz" -o v1/GeoIPASNumv6.dat.gz
-          curl -fsSL "$BASE/GeoIPISP.dat.gz"     -o v1/GeoIPISP.dat.gz
-          curl -fsSL "$BASE/GeoIPISPv6.dat.gz"   -o v1/GeoIPISPv6.dat.gz
-          curl -fsSL "$BASE/GeoIPOrg.dat.gz"     -o v1/GeoIPOrg.dat.gz
-          curl -fsSL "$BASE/GeoIPOrgv6.dat.gz"   -o v1/GeoIPOrgv6.dat.gz
+          mkdir -p tmp/v1 v1
+
+          FILES=(
+            GeoIP.dat.gz        GeoIPv6.dat.gz
+            GeoIPCity.dat.gz    GeoIPCityv6.dat.gz
+            GeoIPASNum.dat.gz   GeoIPASNumv6.dat.gz
+            GeoIPISP.dat.gz     GeoIPISPv6.dat.gz
+            GeoIPOrg.dat.gz     GeoIPOrgv6.dat.gz
+          )
+
+          for f in "${FILES[@]}"; do
+            echo ":: Downloading $f"
+            curl -fsSL --retry 3 --retry-delay 5 --retry-all-errors --max-time 120 \
+              "$BASE/$f" -o "tmp/v1/$f"
+
+            gzip -t "tmp/v1/$f" \
+              || { echo "ERROR: $f failed gzip integrity check"; exit 1; }
+
+            SIZE=$(stat -c%s "tmp/v1/$f")
+            [ "$SIZE" -lt 50000 ] \
+              && { echo "ERROR: $f is suspiciously small (${SIZE} bytes)"; exit 1; }
+
+            echo "OK: $f (${SIZE} bytes)"
+          done
+
+          mv tmp/v1/* v1/
 
       - name: Download GeoLite2 databases from P3TERX (v2)
         run: |
           BASE="https://github.com/P3TERX/GeoLite.mmdb/releases/latest/download"
-          mkdir -p v2
-          curl -fsSL "$BASE/GeoLite2-ASN.mmdb"     -o v2/GeoLite2-ASN.mmdb
-          curl -fsSL "$BASE/GeoLite2-City.mmdb"    -o v2/GeoLite2-City.mmdb
-          curl -fsSL "$BASE/GeoLite2-Country.mmdb" -o v2/GeoLite2-Country.mmdb
+          mkdir -p tmp/v2 v2
+
+          FILES=(GeoLite2-ASN.mmdb GeoLite2-City.mmdb GeoLite2-Country.mmdb)
+
+          for f in "${FILES[@]}"; do
+            echo ":: Downloading $f"
+            curl -fsSL --retry 3 --retry-delay 5 --retry-all-errors --max-time 120 \
+              "$BASE/$f" -o "tmp/v2/$f"
+
+            python3 - "tmp/v2/$f" <<'EOF'
+          import sys
+          path = sys.argv[1]
+          with open(path, 'rb') as fh:
+              content = fh.read()
+          if b'MaxMind.com' not in content[-512:]:
+              print(f"ERROR: {path} is not a valid MMDB file (missing MaxMind metadata)")
+              sys.exit(1)
+          EOF
+
+            SIZE=$(stat -c%s "tmp/v2/$f")
+            [ "$SIZE" -lt 1000000 ] \
+              && { echo "ERROR: $f is suspiciously small (${SIZE} bytes)"; exit 1; }
+
+            echo "OK: $f (${SIZE} bytes)"
+          done
+
+          mv tmp/v2/* v2/
 
       - name: Commit if changed
         run: |
