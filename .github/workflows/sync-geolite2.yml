@@ -19,15 +19,16 @@ jobs:
       - name: Download latest GeoLite2 databases from P3TERX
         run: |
           BASE="https://github.com/P3TERX/GeoLite.mmdb/releases/latest/download"
-          curl -fsSL "$BASE/GeoLite2-ASN.mmdb"     -o GeoLite2-ASN.mmdb
-          curl -fsSL "$BASE/GeoLite2-City.mmdb"    -o GeoLite2-City.mmdb
-          curl -fsSL "$BASE/GeoLite2-Country.mmdb" -o GeoLite2-Country.mmdb
+          mkdir -p v2
+          curl -fsSL "$BASE/GeoLite2-ASN.mmdb"     -o v2/GeoLite2-ASN.mmdb
+          curl -fsSL "$BASE/GeoLite2-City.mmdb"    -o v2/GeoLite2-City.mmdb
+          curl -fsSL "$BASE/GeoLite2-Country.mmdb" -o v2/GeoLite2-Country.mmdb
 
       - name: Commit if changed
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add GeoLite2-ASN.mmdb GeoLite2-City.mmdb GeoLite2-Country.mmdb
+          git add v2/GeoLite2-ASN.mmdb v2/GeoLite2-City.mmdb v2/GeoLite2-Country.mmdb
           if git diff --cached --quiet; then
             echo "No changes detected, skipping commit."
           else
