@@ -1,4 +1,4 @@
-name: Sync GeoLite2 Country Database
+name: Sync GeoLite2 Databases
 
 on:
   schedule:
@@ -16,20 +16,21 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Download GeoLite2-Country.mmdb.gz
+      - name: Download latest GeoLite2 databases from P3TERX
         run: |
-          curl -fsSL \
-            "https://raw.githubusercontent.com/wp-statistics/GeoLite2-Country/master/GeoLite2-Country.mmdb.gz" \
-            -o GeoLite2-Country.mmdb.gz
+          BASE="https://github.com/P3TERX/GeoLite.mmdb/releases/latest/download"
+          curl -fsSL "$BASE/GeoLite2-ASN.mmdb"     -o GeoLite2-ASN.mmdb
+          curl -fsSL "$BASE/GeoLite2-City.mmdb"    -o GeoLite2-City.mmdb
+          curl -fsSL "$BASE/GeoLite2-Country.mmdb" -o GeoLite2-Country.mmdb
 
       - name: Commit if changed
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add GeoLite2-Country.mmdb.gz
+          git add GeoLite2-ASN.mmdb GeoLite2-City.mmdb GeoLite2-Country.mmdb
           if git diff --cached --quiet; then
             echo "No changes detected, skipping commit."
           else
-            git commit -m "chore: sync GeoLite2-Country.mmdb.gz [$(date -u +%Y-%m-%d)]"
+            git commit -m "chore: sync GeoLite2 databases [$(date -u +%Y-%m-%d)]"
             git push
           fi
