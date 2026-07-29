@@ -82,73 +82,55 @@ jobs:
 
           mv tmp/v2/* v2/
 
-      - name: Convert GeoLite2 Country MMDB to CSV
+      - name: Build MaxMind-format Country CSV set
         run: |
-          mkdir -p csv tmp/csv
+          mkdir -p csv tmp
           python3 -m pip install --upgrade maxminddb
 
-          python3 - <<'EOF'
-          import csv
-          import sys
+          python3 scripts/build_opnsense_geoip.py \
+            --mmdb v2/GeoLite2-Country.mmdb \
+            --out-dir tmp/opnsense \
+            --epoch-file tmp/build_epoch \
+            || { echo "ERROR: CSV build failed"; exit 1; }
 
-          import maxminddb
-
-          reader = maxminddb.open_database('v2/GeoLite2-Country.mmdb')
-          rows = 0
-
-          with open('tmp/csv/GeoLite2-Country.csv', 'w', newline='', encoding='utf-8') as f:
-              writer = csv.writer(f)
-              writer.writerow(['network', 'geoname_id', 'country_iso_code', 'country_name'])
-
-              for network, data in reader:
-                  country_data = data.get('country') or data.get('registered_country') or {}
-
-                  writer.writerow([
-                      str(network),
-                      country_data.get('geoname_id', ''),
-                      country_data.get('iso_code', ''),
-                      country_data.get('names', {}).get('en', ''),
-                  ])
-                  rows += 1
-
-          reader.close()
-
-          print(f"Wrote {rows} rows to tmp/csv/GeoLite2-Country.csv")
-          if rows < 100000:
-              print("ERROR: suspiciously few rows, aborting")
-              sys.exit(1)
-          EOF
-
-          echo "Successfully converted MMDB to CSV!"
-
-      - name: Compress CSV to ZIP
+      - name: Package CSV set as ZIP
         run: |
           command -v zip >/dev/null 2>&1 || {
             sudo apt-get update -qq \
               && sudo apt-get install -y --no-install-recommends zip unzip \
-              || { echo "ERROR: could not install zip"; exit 1; }
+              || { echo "ERROR: could not install zip/unzip"; exit 1; }
           }
 
-          # Pin the mtime and strip extra fields (-X) so identical CSV content
-          # always produces byte-identical ZIP bytes. Without this the embedded
-          # timestamp changes every run and "Commit if changed" would commit a
-          # new binary blob daily even when the data is unchanged.
-          touch -d '2000-01-01 00:00:00 UTC' tmp/csv/GeoLite2-Country.csv
+          # Stamp the members with the MMDB's own build_epoch rather than "now".
+          # Two reasons: OPNsense surfaces the locations member's ZIP timestamp
+          # as the database date, and a fixed timestamp plus `zip -X` makes the
+          # archive byte-identical when the source data has not changed, so
+          # "Commit if changed" stays a real no-op instead of committing a fresh
+          # 4 MB blob every single day.
+          TS=$(date -u -d "@$(cat tmp/build_epoch)" '+%Y-%m-%d %H:%M:%S')
+          echo ":: stamping members with $TS UTC (MMDB build_epoch)"
+          find tmp/opnsense -name '*.csv' -exec touch -d "$TS UTC" {} +
 
-          rm -f csv/GeoLite2-Country.csv.zip
-          zip -9 -j -X csv/GeoLite2-Country.csv.zip tmp/csv/GeoLite2-Country.csv \
+          # -j flatten (OPNsense matches on basename), -X drop uid/gid+extended
+          # timestamps, -FS make the archive a clean rebuild rather than a sync.
+          zip -9 -j -X -FS csv/GeoLite2-Country-CSV.zip \
+            tmp/opnsense/GeoLite2-Country-Locations-en.csv \
+            tmp/opnsense/GeoLite2-Country-Blocks-IPv4.csv \
+            tmp/opnsense/GeoLite2-Country-Blocks-IPv6.csv \
             || { echo "ERROR: zip failed"; exit 1; }
 
-          unzip -t csv/GeoLite2-Country.csv.zip \
+          unzip -t csv/GeoLite2-Country-CSV.zip \
             || { echo "ERROR: ZIP failed integrity check"; exit 1; }
 
-          RAW=$(stat -c%s tmp/csv/GeoLite2-Country.csv)
-          ZIPPED=$(stat -c%s csv/GeoLite2-Country.csv.zip)
-          [ "$ZIPPED" -lt 100000 ] \
-            && { echo "ERROR: ZIP is suspiciously small (${ZIPPED} bytes)"; exit 1; }
+      - name: Verify ZIP against OPNsense parser rules
+        run: |
+          # Replays OPNsense's process_zip logic. Its failure mode is silent —
+          # a wrongly named member makes it parse nothing without raising — so
+          # this has to assert on parsed output, not just on the file existing.
+          python3 scripts/verify_opnsense_geoip.py csv/GeoLite2-Country-CSV.zip \
+            || { echo "ERROR: archive is not OPNsense-compatible"; exit 1; }
 
-          echo "OK: csv/GeoLite2-Country.csv.zip (${ZIPPED} bytes, raw ${RAW} bytes)"
-
+          echo "OK: csv/GeoLite2-Country-CSV.zip ($(stat -c%s csv/GeoLite2-Country-CSV.zip) bytes)"
           rm -rf tmp
 
       - name: Commit if changed

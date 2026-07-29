@@ -48,6 +48,32 @@ https://raw.githubusercontent.com/burachai-x/geolite-database/main/v2/GeoLite2-C
 https://raw.githubusercontent.com/burachai-x/geolite-database/main/v2/GeoLite2-Country.mmdb
 ```
 
+## csv — GeoLite2 Country CSV (OPNsense GeoIP alias)
+
+Generated from `v2/GeoLite2-Country.mmdb`, laid out exactly like MaxMind's
+`GeoLite2-Country-CSV` edition so OPNsense's GeoIP alias backend can consume it
+without a MaxMind account.
+
+| File | Description |
+|------|-------------|
+| `csv/GeoLite2-Country-CSV.zip` | `Locations-en` + `Blocks-IPv4` + `Blocks-IPv6` |
+
+Paste this into **Firewall → Aliases → GeoIP settings → URL**, then apply:
+
+```
+https://raw.githubusercontent.com/burachai-x/geolite-database/main/csv/GeoLite2-Country-CSV.zip
+```
+
+Notes:
+
+- The URL **must** end in `.zip`. `raw.githubusercontent.com` sends no
+  `Content-Disposition` header, so OPNsense falls through to its ZIP branch —
+  a `.gz` feed would be handed to `zipfile` and fail.
+- Networks that carry only a `registered_country` (~0.2%) have a blank
+  `geoname_id` and are skipped by OPNsense, matching genuine MaxMind behaviour.
+- Archive members are stamped with the MMDB's `build_epoch`, so OPNsense reports
+  the real database date and unchanged data produces a byte-identical ZIP.
+
 ## Update Schedule
 
 Runs daily at **20:13 UTC** (03:13 ICT next day). Only commits when databases change.
