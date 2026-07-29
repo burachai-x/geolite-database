@@ -16,6 +16,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
 
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
       - name: Download GeoIP Legacy databases from mailfud.org (v1)
         run: |
           BASE="https://mailfud.org/geoip-legacy"
@@ -80,27 +85,38 @@ jobs:
       - name: Convert GeoLite2 Country MMDB to CSV
         run: |
           mkdir -p csv
-          pip install maxminddb
+          python3 -m pip install --upgrade maxminddb
 
           python3 - <<'EOF'
-          import maxminddb
           import csv
+          import sys
+
+          import maxminddb
 
           reader = maxminddb.open_database('v2/GeoLite2-Country.mmdb')
-          
+          rows = 0
+
           with open('csv/GeoLite2-Country.csv', 'w', newline='', encoding='utf-8') as f:
               writer = csv.writer(f)
               writer.writerow(['network', 'geoname_id', 'country_iso_code', 'country_name'])
-              
-              for network, data in reader.iter_all():
-                  country_data = data.get('country', {})
-                  geoname_id = country_data.get('geoname_id', '')
-                  iso_code = country_data.get('iso_code', '')
-                  country_name = country_data.get('names', {}).get('en', '')
-                  
-                  writer.writerow([str(network), geoname_id, iso_code, country_name])
+
+              for network, data in reader:
+                  country_data = data.get('country') or data.get('registered_country') or {}
+
+                  writer.writerow([
+                      str(network),
+                      country_data.get('geoname_id', ''),
+                      country_data.get('iso_code', ''),
+                      country_data.get('names', {}).get('en', ''),
+                  ])
+                  rows += 1
 
           reader.close()
+
+          print(f"Wrote {rows} rows to csv/GeoLite2-Country.csv")
+          if rows < 100000:
+              print("ERROR: suspiciously few rows, aborting")
+              sys.exit(1)
           EOF
 
           echo "Successfully converted MMDB to CSV!"
@@ -109,7 +125,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add v1/ v2/
+          git add v1/ v2/ csv/
           if git diff --cached --quiet; then
             echo "No changes detected, skipping commit."
           else
