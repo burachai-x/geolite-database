@@ -84,7 +84,7 @@ jobs:
 
       - name: Convert GeoLite2 Country MMDB to CSV
         run: |
-          mkdir -p csv
+          mkdir -p csv tmp/csv
           python3 -m pip install --upgrade maxminddb
 
           python3 - <<'EOF'
@@ -96,7 +96,7 @@ jobs:
           reader = maxminddb.open_database('v2/GeoLite2-Country.mmdb')
           rows = 0
 
-          with open('csv/GeoLite2-Country.csv', 'w', newline='', encoding='utf-8') as f:
+          with open('tmp/csv/GeoLite2-Country.csv', 'w', newline='', encoding='utf-8') as f:
               writer = csv.writer(f)
               writer.writerow(['network', 'geoname_id', 'country_iso_code', 'country_name'])
 
@@ -113,13 +113,43 @@ jobs:
 
           reader.close()
 
-          print(f"Wrote {rows} rows to csv/GeoLite2-Country.csv")
+          print(f"Wrote {rows} rows to tmp/csv/GeoLite2-Country.csv")
           if rows < 100000:
               print("ERROR: suspiciously few rows, aborting")
               sys.exit(1)
           EOF
 
           echo "Successfully converted MMDB to CSV!"
+
+      - name: Compress CSV to ZIP
+        run: |
+          command -v zip >/dev/null 2>&1 || {
+            sudo apt-get update -qq \
+              && sudo apt-get install -y --no-install-recommends zip unzip \
+              || { echo "ERROR: could not install zip"; exit 1; }
+          }
+
+          # Pin the mtime and strip extra fields (-X) so identical CSV content
+          # always produces byte-identical ZIP bytes. Without this the embedded
+          # timestamp changes every run and "Commit if changed" would commit a
+          # new binary blob daily even when the data is unchanged.
+          touch -d '2000-01-01 00:00:00 UTC' tmp/csv/GeoLite2-Country.csv
+
+          rm -f csv/GeoLite2-Country.csv.zip
+          zip -9 -j -X csv/GeoLite2-Country.csv.zip tmp/csv/GeoLite2-Country.csv \
+            || { echo "ERROR: zip failed"; exit 1; }
+
+          unzip -t csv/GeoLite2-Country.csv.zip \
+            || { echo "ERROR: ZIP failed integrity check"; exit 1; }
+
+          RAW=$(stat -c%s tmp/csv/GeoLite2-Country.csv)
+          ZIPPED=$(stat -c%s csv/GeoLite2-Country.csv.zip)
+          [ "$ZIPPED" -lt 100000 ] \
+            && { echo "ERROR: ZIP is suspiciously small (${ZIPPED} bytes)"; exit 1; }
+
+          echo "OK: csv/GeoLite2-Country.csv.zip (${ZIPPED} bytes, raw ${RAW} bytes)"
+
+          rm -rf tmp
 
       - name: Commit if changed
         run: |
