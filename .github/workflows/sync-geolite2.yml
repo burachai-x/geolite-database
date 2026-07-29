@@ -77,6 +77,33 @@ jobs:
 
           mv tmp/v2/* v2/
 
+      - name: Convert GeoLite2 Country MMDB to CSV
+        run: |
+          mkdir -p csv
+          pip install maxminddb-geolite2
+
+          python3 - <<'EOF'
+          import maxminddb
+          import csv
+
+          reader = maxminddb.open_database('v2/GeoLite2-Country.mmdb')
+          
+          with open('csv/GeoLite2-Country.csv', 'w', newline='', encoding='utf-8') as f:
+              writer = csv.writer(f)
+              writer.writerow(['network', 'geoname_id', 'country_iso_code', 'country_name'])
+              
+              for network, data in reader.iter_all():
+                  country_data = data.get('country', {})
+                  geoname_id = country_data.get('geoname_id', '')
+                  iso_code = country_data.get('iso_code', '')
+                  country_name = country_data.get('names', {}).get('en', '')
+                  
+                  writer.writerow([str(network), geoname_id, iso_code, country_name])
+
+          reader.close()
+          echo "Successfully converted MMDB to CSV!"
+          EOF
+
       - name: Commit if changed
         run: |
           git config user.name "github-actions[bot]"
