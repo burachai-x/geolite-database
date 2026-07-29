@@ -80,7 +80,7 @@ jobs:
       - name: Convert GeoLite2 Country MMDB to CSV
         run: |
           mkdir -p csv
-          pip install maxminddb-geolite2
+          pip install maxminddb
 
           python3 - <<'EOF'
           import maxminddb
@@ -101,8 +101,9 @@ jobs:
                   writer.writerow([str(network), geoname_id, iso_code, country_name])
 
           reader.close()
-          echo "Successfully converted MMDB to CSV!"
           EOF
+
+          echo "Successfully converted MMDB to CSV!"
 
       - name: Commit if changed
         run: |
